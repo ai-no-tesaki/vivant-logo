@@ -124,7 +124,7 @@
 
   <section>
     <h2>アニメーション</h2>
-    <div class="row"><label>長さ (秒)</label><input type="range" id="duration" min="0.4" max="8" step="0.1" value="1.6"><span class="val" id="duration_v"></span></div>
+    <div class="row"><label>長さ (秒)</label><input type="range" id="duration" min="0.4" max="8" step="0.1" value="1.8"><span class="val" id="duration_v"></span></div>
     <div class="row"><label>終了後の静止</label><input type="range" id="hold" min="0" max="4" step="0.1" value="1"><span class="val" id="hold_v"></span></div>
     <div class="row"><label>t の進み方</label>
       <select id="easing">
@@ -133,9 +133,8 @@
         <option value="inout">イーズインアウト</option>
       </select>
     </div>
-    <div class="row"><label>ループ再生</label><input type="checkbox" id="loop" checked></div>
-    <p class="hint">「長さ」は再生・書き出しの実尺（t=20→100）です。何も映らない t=0→20 は飛ばすので、
-      移動の速さはそのままで尺だけが 2.0 秒→1.6 秒に縮みます。<br>
+    <div class="row"><label>ループ再生</label><input type="checkbox" id="loop"></div>
+    <p class="hint">「長さ」は再生・書き出しの実尺（t=20→100）です。何も映らない t=0→20 は飛ばしています。<br>
       t=20→100 透明度100%→0% ／ t=70→100 移動が減速して停止 ／ t=80→100 影が消える<br>
       タイムラインは t=0 から確認できます（t&lt;20 は完全に透明）。</p>
   </section>

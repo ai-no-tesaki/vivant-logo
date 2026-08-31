@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VIVANT風 ロゴアニメーション生成器</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0b0d; --panel:#131317; --panel2:#1b1b21; --line:#2b2b33;
+    --tx:#e8e8ec; --tx2:#9a9aa6; --accent:#e10600;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--bg); color:var(--tx);
+    font:13px/1.5 ui-sans-serif,-apple-system,"Segoe UI","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+    display:flex; flex-direction:column;
+  }
+  header{
+    display:flex; align-items:baseline; gap:12px; padding:12px 18px;
+    border-bottom:1px solid var(--line); background:var(--panel);
+  }
+  header h1{margin:0; font-size:14px; letter-spacing:.16em; font-weight:700}
+  header h1 b{color:var(--accent)}
+  header span{color:var(--tx2); font-size:11px}
+  main{flex:1; display:flex; min-height:0}
+  aside{
+    width:330px; flex:none; overflow-y:auto; padding:14px 16px 40px;
+    border-right:1px solid var(--line); background:var(--panel);
+  }
+  section{margin:0 0 18px}
+  section > h2{
+    margin:0 0 10px; font-size:10px; letter-spacing:.18em; color:var(--tx2);
+    text-transform:uppercase; border-bottom:1px solid var(--line); padding-bottom:6px;
+  }
+  .row{display:flex; align-items:center; gap:8px; margin-bottom:9px}
+  .row label{flex:none; width:96px; color:var(--tx2); font-size:11px}
+  .row .val{flex:none; width:54px; text-align:right; font-variant-numeric:tabular-nums; color:var(--tx2); font-size:11px}
+  input[type=text],select,input[type=number]{
+    flex:1; min-width:0; background:var(--panel2); color:var(--tx);
+    border:1px solid var(--line); border-radius:5px; padding:6px 8px; font:inherit;
+  }
+  input[type=range]{flex:1; min-width:0; accent-color:var(--accent); background:transparent}
+  input[type=color]{
+    flex:none; width:44px; height:26px; padding:0; background:none;
+    border:1px solid var(--line); border-radius:5px; cursor:pointer;
+  }
+  input[type=checkbox]{accent-color:var(--accent); width:15px; height:15px}
+  button{
+    background:var(--panel2); color:var(--tx); border:1px solid var(--line);
+    border-radius:6px; padding:7px 12px; font:inherit; cursor:pointer;
+  }
+  button:hover{border-color:#4a4a56; background:#22222a}
+  button.primary{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600}
+  button.primary:hover{background:#ff2018}
+  button:disabled{opacity:.45; cursor:not-allowed}
+  .btns{display:flex; gap:8px; flex-wrap:wrap}
+  .stage{flex:1; display:flex; flex-direction:column; min-width:0; min-height:0}
+  .view{
+    flex:1; display:flex; align-items:center; justify-content:center;
+    padding:20px; overflow:auto;
+    background:
+      linear-gradient(45deg,#101014 25%,transparent 25%,transparent 75%,#101014 75%),
+      linear-gradient(45deg,#101014 25%,#0d0d10 25%,#0d0d10 75%,#101014 75%);
+    background-size:24px 24px; background-position:0 0,12px 12px;
+  }
+  canvas{max-width:100%; max-height:100%; box-shadow:0 0 0 1px var(--line), 0 12px 40px #000a}
+  .transport{
+    border-top:1px solid var(--line); background:var(--panel);
+    padding:10px 16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  }
+  .transport input[type=range]{flex:1; min-width:200px}
+  .tval{font-variant-numeric:tabular-nums; width:78px; font-size:12px; color:var(--tx2)}
+  .tval b{color:var(--tx)}
+  .hint{color:var(--tx2); font-size:11px; margin:6px 0 0; line-height:1.65}
+  .stat{color:var(--tx2); font-size:11px; font-variant-numeric:tabular-nums}
+  .rec{color:var(--accent); font-weight:700}
+  @media(max-width:860px){
+    main{flex-direction:column}
+    aside{width:auto; border-right:none; border-bottom:1px solid var(--line); max-height:46vh}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1><b>VIVANT</b>風 ロゴアニメーション生成器</h1>
+  <span>黒地 × 赤文字 ／ 重なり → 展開（終盤で減速）／ 立体レイヤーと影</span>
+</header>
+
+<main>
+<aside>
+  <section>
+    <h2>テキスト</h2>
+    <div class="row"><label>文字列</label><input type="text" id="text" value="VIVANT"></div>
+    <div class="row"><label>大文字に変換</label><input type="checkbox" id="upper" checked></div>
+    <div class="row"><label>フォント</label><span class="stat">Archivo Black ／ 横比率 0.75（固定）</span></div>
+    <div class="row"><label>ウェイト</label>
+      <select id="weight">
+        <option>400</option><option>500</option><option>600</option>
+        <option selected>700</option><option>800</option><option>900</option>
+      </select>
+    </div>
+    <div class="row"><label>サイズ</label><input type="range" id="size" min="40" max="400" step="1" value="190"><span class="val" id="size_v"></span></div>
+    <div class="row"><label>字間 (em)</label><input type="range" id="tracking" min="-0.16" max="0.4" step="0.005" value="-0.02"><span class="val" id="tracking_v"></span></div>
+  </section>
+
+  <section>
+    <h2>カラー</h2>
+    <div class="row"><label>文字色</label><input type="color" id="fg" value="#e10600"><span class="stat" id="fg_v"></span></div>
+    <div class="row"><label>背景色</label><input type="color" id="bg" value="#000000"><span class="stat" id="bg_v"></span></div>
+  </section>
+
+  <section>
+    <h2>立体感（影）</h2>
+    <div class="row"><label>影の幅 ÷ 線幅</label><input type="range" id="shadowRatio" min="0" max="2" step="0.05" value="0.8"><span class="val" id="shadowRatio_v"></span></div>
+    <div class="row"><label>最内側の濃さ</label><input type="range" id="shadowAlpha" min="0" max="1" step="0.01" value="1"><span class="val" id="shadowAlpha_v"></span></div>
+    <div class="row"><label>影を出す</label><input type="checkbox" id="shadowOn" checked></div>
+    <p class="hint">推定線幅 <b id="stemInfo">–</b> px → 影の幅 <b id="shadowInfo">–</b> px<br>
+      影は「上のレイヤーの文字」が「下のレイヤーの文字の上」にだけ落ちます。字面に接する最内側が透明度0%（＝完全な黒）、外縁で透明度100%。t=80→100 で完全に消えます。</p>
+  </section>
+
+  <section>
+    <h2>アニメーション</h2>
+    <div class="row"><label>長さ (秒)</label><input type="range" id="duration" min="0.4" max="8" step="0.1" value="1.6"><span class="val" id="duration_v"></span></div>
+    <div class="row"><label>終了後の静止</label><input type="range" id="hold" min="0" max="4" step="0.1" value="1"><span class="val" id="hold_v"></span></div>
+    <div class="row"><label>t の進み方</label>
+      <select id="easing">
+        <option value="linear" selected>等速（実時間に比例）</option>
+        <option value="out">イーズアウト</option>
+        <option value="inout">イーズインアウト</option>
+      </select>
+    </div>
+    <div class="row"><label>ループ再生</label><input type="checkbox" id="loop" checked></div>
+    <p class="hint">「長さ」は再生・書き出しの実尺（t=20→100）です。何も映らない t=0→20 は飛ばすので、
+      移動の速さはそのままで尺だけが 2.0 秒→1.6 秒に縮みます。<br>
+      t=20→100 透明度100%→0% ／ t=70→100 移動が減速して停止 ／ t=80→100 影が消える<br>
+      タイムラインは t=0 から確認できます（t&lt;20 は完全に透明）。</p>
+  </section>
+
+  <section>
+    <h2>出力サイズ</h2>
+    <div class="row"><label>幅 (px)</label><input type="number" id="cw" value="1600" min="100" max="4096" step="10"></div>
+    <div class="row"><label>高さ (px)</label><input type="number" id="ch" value="600" min="100" max="4096" step="10"></div>
+    <div class="btns">
+      <button data-preset="1600x600">1600×600</button>
+      <button data-preset="1920x1080">1920×1080</button>
+      <button data-preset="1080x1080">1080×1080</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>書き出し</h2>
+    <div class="btns">
+      <button id="dlPng">現在フレームPNG</button>
+      <button id="dlPngEnd">完成形PNG (t=100)</button>
+    </div>
+    <div class="btns" style="margin-top:8px">
+      <button id="dlWebm" class="primary">動画を書き出す (WebM)</button>
+    </div>
+    <p class="hint" id="recInfo">WebM は VP9／VP8。GIF が必要なら書き出した WebM を変換してください。</p>
+  </section>
+</aside>
+
+<div class="stage">
+  <div class="view"><canvas id="cv"></canvas></div>
+  <div class="transport">
+    <button id="play" class="primary">▶ 再生</button>
+    <input type="range" id="t" min="0" max="100" step="0.1" value="100">
+    <div class="tval">t = <b id="t_v">100.0</b></div>
+    <button id="toStart">t=0</button>
+    <button id="toEnd">t=100</button>
+  </div>
+</div>
+</main>
+
+<script>
+(() => {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const canvas = $('cv'), ctx = canvas.getContext('2d');
+
+  // オフスクリーン
+  //   lc = ロゴ1枚分のレイヤー（ここで文字と影を合成し、最後にまとめてフェードさせる）
+  //   sc = 影のビルド用 / mc = 「すでに描いた（下にある）文字」のマスク
+  const lc = document.createElement('canvas'), lctx = lc.getContext('2d');
+  const sc = document.createElement('canvas'), sctx = sc.getContext('2d');
+  const mc = document.createElement('canvas'), mctx = mc.getContext('2d');
+
+  let W = 0, H = 0;   // 0 にしておくと初回 readState() で必ずリサイズが走る
+  const state = {};
+
+  // VIVANT のロゴに一番近い組み合わせとして固定
+  const FAMILY  = 'Archivo Black, sans-serif';
+  const SCALE_X = 0.75;
+
+  // 影が透明になり始める t（ここから t=100 で完全に消える）
+  const SHADOW_FADE_FROM = 80;
+
+  // 全体の透明度が動きはじめる t（ここまでは透明度100%＝何も見えない）
+  const FADE_FROM = 20;
+
+  // 再生・書き出しはここから始める。t=0→FADE_FROM は何も映らない区間なので飛ばす。
+  // 移動の速度は変わらないまま、全体の尺だけが (FADE_FROM/100) 分だけ短くなる。
+  const T_START = FADE_FROM;
+
+  // 移動が減速しはじめる t（ここまでは等速）
+  const DECEL_FROM = 70;
+
+  // 展開率 P(t)。P(0)=0, P(100)=1。
+  //   t <= DECEL_FROM : 等速（速度 v0）
+  //   t >  DECEL_FROM : 速度を v0*(1-u^2) で落とす（u = 減速区間の進捗 0→1）
+  //     → 減速度 |dv/du| = 2*v0*u なので t=100 に近づくほど減速が強くなり、
+  //       t=100 でちょうど速度0・P=1 になる。
+  // 減速区間で稼げる距離が等速のときより短くなる分、v0 を上げて終点を揃えている。
+  const DECEL_SPAN = 100 - DECEL_FROM;
+  const V0 = 1 / (DECEL_FROM + DECEL_SPAN * 2 / 3);
+
+  function progress(t){
+    if (t <= DECEL_FROM) return V0 * t;
+    const u = Math.min(1, (t - DECEL_FROM) / DECEL_SPAN);
+    return V0 * (DECEL_FROM + DECEL_SPAN * (u - u * u * u / 3));
+  }
+
+  const IDS = ['text','upper','weight','size','tracking','fg','bg',
+               'shadowRatio','shadowAlpha','shadowOn',
+               'duration','hold','easing','loop','cw','ch'];
+
+  function readState(){
+    state.family = FAMILY;
+    state.scaleX = SCALE_X;
+    for (const id of IDS){
+      const el = $(id);
+      state[id] = el.type === 'checkbox' ? el.checked
+                : (el.type === 'range' || el.type === 'number') ? parseFloat(el.value)
+                : el.value;
+    }
+    $('size_v').textContent        = state.size + 'px';
+    $('tracking_v').textContent    = state.tracking.toFixed(3);
+    $('shadowRatio_v').textContent = state.shadowRatio.toFixed(2);
+    $('shadowAlpha_v').textContent = state.shadowAlpha.toFixed(2);
+    $('duration_v').textContent    = state.duration.toFixed(1) + 's';
+    $('hold_v').textContent        = state.hold.toFixed(1) + 's';
+    $('fg_v').textContent          = state.fg;
+    $('bg_v').textContent          = state.bg;
+
+    const w = Math.max(100, Math.min(4096, Math.round(state.cw) || 1600));
+    const h = Math.max(100, Math.min(4096, Math.round(state.ch) || 600));
+    if (w !== W || h !== H){
+      W = w; H = h;
+      canvas.width  = lc.width  = sc.width  = mc.width  = W;
+      canvas.height = lc.height = sc.height = mc.height = H;
+    }
+    return state;
+  }
+
+  const fontString  = s => s.weight + ' ' + s.size + 'px ' + s.family;
+  const displayText = s => (s.upper ? s.text.toUpperCase() : s.text).replace(/\s+$/, '');
+
+  // ---- 1文字を描く（横比率つき） ------------------------------------------
+  function glyph(c2, ch, x, y, s, stroke){
+    c2.save();
+    c2.translate(x, y);
+    c2.scale(s.scaleX, 1);
+    c2.font = fontString(s);
+    c2.textAlign = 'center';
+    c2.textBaseline = 'alphabetic';
+    if (stroke) c2.strokeText(ch, 0, 0);
+    c2.fillText(ch, 0, 0);
+    c2.restore();
+  }
+
+  // ---- 文字の線の太さ（ステム幅）を実測 -----------------------------------
+  const stemCache = { key:null, val:0 };
+  function estimateStem(s){
+    const txt = displayText(s) || 'A';
+    const key = [txt, s.family, s.weight, s.size, s.scaleX].join('|');
+    if (stemCache.key === key) return stemCache.val;
+
+    const cw  = Math.min(4000, Math.ceil(s.size * Math.max(2, txt.length) * 1.4) + 40);
+    const chh = Math.ceil(s.size * 2) + 40;
+    const c = document.createElement('canvas');
+    c.width = cw; c.height = chh;
+    const g = c.getContext('2d', { willReadFrequently:true });
+    g.fillStyle = '#fff';
+    g.save();
+    g.translate(cw / 2, chh / 2);
+    g.scale(s.scaleX, 1);
+    g.font = fontString(s);
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText(txt, 0, 0);
+    g.restore();
+
+    let runs = [];
+    try {
+      const d  = g.getImageData(0, 0, cw, chh).data;
+      const y0 = Math.floor(chh * 0.34), y1 = Math.floor(chh * 0.66);
+      for (let y = y0; y < y1; y += 2){
+        let run = 0;
+        for (let x = 0; x < cw; x++){
+          if (d[(y * cw + x) * 4 + 3] > 128) run++;
+          else { if (run > 1) runs.push(run); run = 0; }
+        }
+        if (run > 1) runs.push(run);
+      }
+    } catch (e) { runs = []; }
+
+    runs = runs.filter(r => r <= s.size * 0.75);
+    let val;
+    if (runs.length >= 5){
+      runs.sort((a, b) => a - b);
+      val = runs[Math.floor(runs.length * 0.4)];   // 斜線は太く出るので低めの分位点を採る
+    } else {
+      val = s.size * 0.18;
+    }
+    val = Math.max(1, Math.min(val, s.size * 0.5));
+    stemCache.key = key;
+    stemCache.val = val;
+    return val;
+  }
+
+  // ---- 外へ広がる黒グラデーションの影を作る -------------------------------
+  // 字面に接する最内側 alpha = maxA（透明度0%）、外縁 alpha = 0（透明度100%）。
+  // 同心のストロークを外→内に重ねてグラデーションを近似する。
+  const BANDS = 16;
+  function buildShadow(ch, x, y, spread, maxA, s){
+    sctx.setTransform(1, 0, 0, 1, 0, 0);
+    sctx.clearRect(0, 0, W, H);
+    sctx.globalCompositeOperation = 'source-over';
+    sctx.lineJoin  = 'round';
+    sctx.lineCap   = 'round';
+    sctx.fillStyle   = '#000';
+    sctx.strokeStyle = '#000';
+
+    let cum = 0;
+    for (let k = BANDS; k >= 1; k--){
+      const r    = spread * k / BANDS;                    // 字面から外へのはみ出し量
+      const want = maxA * (1 - (k - 1) / BANDS);          // その帯の目標 alpha（k=1 で maxA）
+      const a    = cum >= 1 ? 0 : (want - cum) / (1 - cum); // 重ね合わせ後に want になる alpha
+      if (a > 0.002){
+        sctx.globalAlpha = Math.min(1, a);
+        sctx.lineWidth   = r * 2;
+        glyph(sctx, ch, x, y, s, true);
+      }
+      cum = want;
+    }
+    sctx.globalAlpha = 1;
+    sctx.globalCompositeOperation = 'destination-out';   // 自分の字面の内側は影を消す
+    glyph(sctx, ch, x, y, s, false);
+    sctx.globalCompositeOperation = 'destination-in';    // 下にある文字の上だけに残す
+    sctx.drawImage(mc, 0, 0);
+    sctx.globalCompositeOperation = 'source-over';
+  }
+
+  // ---- レイアウト ----------------------------------------------------------
+  function layout(s){
+    const txt = displayText(s);
+    const chars = [...txt];
+    if (!chars.length) return null;
+    ctx.font = fontString(s);
+    const widths = chars.map(c => ctx.measureText(c).width * s.scaleX);
+    const track  = s.tracking * s.size;
+    const total  = widths.reduce((a, b) => a + b, 0) + track * (chars.length - 1);
+    let cur = -total / 2;
+    const off = [];
+    for (let i = 0; i < chars.length; i++){
+      off.push(cur + widths[i] / 2);
+      cur += widths[i] + track;
+    }
+    const m    = ctx.measureText(txt);
+    const asc  = m.actualBoundingBoxAscent  || s.size * 0.72;
+    const desc = m.actualBoundingBoxDescent || 0;
+    return { chars, off, baseY: H / 2 + (asc - desc) / 2 };
+  }
+
+  // 中央の文字が最下層、両端が最上層。偶数なら「後ろの文字」が下。
+  function zOrder(n){
+    return [...Array(n).keys()].sort((a, b) => {
+      const da = Math.abs(a - (n - 1) / 2), db = Math.abs(b - (n - 1) / 2);
+      if (da !== db) return da - db;   // 中央寄りほど先に描く = 下のレイヤー
+      return b - a;                    // 同距離なら後ろの文字を下に
+    });
+  }
+
+  // ---- 描画 ----------------------------------------------------------------
+  function render(t){
+    const s = readState();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = s.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    const L = layout(s);
+    if (!L){ $('stemInfo').textContent = '–'; $('shadowInfo').textContent = '–'; return; }
+
+    const p = progress(t);                                      // 展開率（終盤で減速）
+
+    // 透明度は FADE_FROM から等速で 100% → 0%
+    const opacity = Math.max(0, (t - FADE_FROM) / (100 - FADE_FROM));
+    // t = SHADOW_FADE_FROM → 100 にかけて影だけが透明度100%へ
+    const sFade = t <= SHADOW_FADE_FROM
+                ? 1
+                : Math.max(0, (100 - t) / (100 - SHADOW_FADE_FROM));
+
+    const stem   = estimateStem(s);
+    const spread = s.shadowOn ? stem * s.shadowRatio : 0;
+    $('stemInfo').textContent   = stem.toFixed(1);
+    $('shadowInfo').textContent = spread.toFixed(1);
+
+    if (opacity <= 0.002) return;   // t=0 は完全に透明
+
+    // ロゴ1枚分をレイヤー上に不透明で合成する。
+    // （文字ごとに透明度を掛けると、重なっている間だけ濃く見えてしまうため）
+    lctx.setTransform(1, 0, 0, 1, 0, 0);
+    lctx.globalCompositeOperation = 'source-over';
+    lctx.globalAlpha = 1;
+    lctx.clearRect(0, 0, W, H);
+
+    mctx.setTransform(1, 0, 0, 1, 0, 0);
+    mctx.clearRect(0, 0, W, H);
+    mctx.fillStyle = '#fff';
+
+    for (const i of zOrder(L.chars.length)){
+      const x  = W / 2 + L.off[i] * p;
+      const ch = L.chars[i];
+
+      if (spread > 0.5 && sFade > 0){
+        buildShadow(ch, x, L.baseY, spread, s.shadowAlpha, s);
+        lctx.globalAlpha = sFade;                // 影だけ先に消える
+        lctx.drawImage(sc, 0, 0);
+      }
+      lctx.globalAlpha = 1;
+      lctx.fillStyle   = s.fg;
+      glyph(lctx, ch, x, L.baseY, s, false);
+
+      glyph(mctx, ch, x, L.baseY, s, false);     // 以降の文字のためにマスクへ追加
+    }
+
+    ctx.globalAlpha = opacity;                   // ロゴ全体をまとめてフェードイン
+    ctx.drawImage(lc, 0, 0);
+    ctx.globalAlpha = 1;
+  }
+
+  // ---- 再生 ----------------------------------------------------------------
+  const ease = (u, kind) =>
+      kind === 'out'   ? 1 - Math.pow(1 - u, 3)
+    : kind === 'inout' ? (u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2)
+    : u;
+
+  let playing = false, startAt = 0, raf = 0;
+
+  function setT(t){
+    $('t').value = t;
+    $('t_v').textContent = t.toFixed(1);
+    render(t);
+  }
+
+  function tick(now){
+    if (!playing) return;
+    const dur = state.duration * 1000, hold = state.hold * 1000;
+    let e = now - startAt;
+    if (e >= dur + hold){
+      if (state.loop){ startAt = now; e = 0; }
+      else { setT(100); stop(); return; }
+    }
+    setT(e < dur ? T_START + (100 - T_START) * ease(e / dur, state.easing) : 100);
+    raf = requestAnimationFrame(tick);
+  }
+
+  function play(){
+    if (playing) return;
+    playing = true;
+    $('play').textContent = '❚❚ 停止';
+    startAt = performance.now();
+    raf = requestAnimationFrame(tick);
+  }
+
+  function stop(){
+    playing = false;
+    cancelAnimationFrame(raf);
+    $('play').textContent = '▶ 再生';
+  }
+
+  // ---- 書き出し ------------------------------------------------------------
+  function save(blob, name){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
+
+  const stamp = () => (displayText(state) || 'logo').replace(/[^0-9A-Za-z一-龥ぁ-んァ-ヶー]/g, '_').slice(0, 24);
+
+  $('dlPng').onclick = () =>
+    canvas.toBlob(b => save(b, stamp() + '_t' + parseFloat($('t').value).toFixed(0) + '.png'), 'image/png');
+
+  $('dlPngEnd').onclick = () => {
+    stop(); setT(100);
+    canvas.toBlob(b => save(b, stamp() + '.png'), 'image/png');
+  };
+
+  $('dlWebm').onclick = async () => {
+    if (!window.MediaRecorder || !canvas.captureStream){
+      $('recInfo').textContent = 'このブラウザは動画書き出しに未対応です（Chrome / Edge 推奨）。';
+      return;
+    }
+    stop();
+    const btn = $('dlWebm');
+    btn.disabled = true;
+
+    const mime = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
+                 .find(m => MediaRecorder.isTypeSupported(m));
+    const stream = canvas.captureStream(60);
+    const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 16000000 });
+    const chunks = [];
+    rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    const stopped = new Promise(r => { rec.onstop = r; });
+
+    setT(T_START);
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    rec.start();
+
+    const dur  = state.duration * 1000;
+    const hold = Math.max(300, state.hold * 1000);
+    const t0   = performance.now();
+    await new Promise(res => {
+      (function step(now){
+        const e = now - t0;
+        if (e >= dur + hold){ setT(100); res(); return; }
+        setT(e < dur ? T_START + (100 - T_START) * ease(e / dur, state.easing) : 100);
+        $('recInfo').innerHTML = '<span class="rec">● 記録中</span> ' +
+          (e / 1000).toFixed(1) + ' / ' + ((dur + hold) / 1000).toFixed(1) + ' 秒';
+        requestAnimationFrame(step);
+      })(performance.now());
+    });
+
+    rec.stop();
+    await stopped;
+    stream.getTracks().forEach(tr => tr.stop());
+    save(new Blob(chunks, { type: mime }), stamp() + '.webm');
+    $('recInfo').textContent = '書き出しました（' + mime + '）。GIF が必要なら WebM を変換してください。';
+    btn.disabled = false;
+  };
+
+  // ---- イベント ------------------------------------------------------------
+  for (const id of IDS){
+    $(id).addEventListener('input', () => {
+      readState();
+      if (!playing) render(parseFloat($('t').value));
+    });
+  }
+
+  $('t').addEventListener('input', e => { stop(); setT(parseFloat(e.target.value)); });
+  $('play').onclick    = () => playing ? stop() : play();
+  $('toStart').onclick = () => { stop(); setT(0); };
+  $('toEnd').onclick   = () => { stop(); setT(100); };
+
+  document.querySelectorAll('[data-preset]').forEach(b => {
+    b.onclick = () => {
+      const parts = b.dataset.preset.split('x');
+      $('cw').value = parts[0];
+      $('ch').value = parts[1];
+      readState();
+      if (!playing) render(parseFloat($('t').value));
+    };
+  });
+
+  addEventListener('keydown', e => {
+    if (e.code === 'Space' && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)){
+      e.preventDefault();
+      playing ? stop() : play();
+    }
+  });
+
+  // ---- 起動 ----------------------------------------------------------------
+  readState();
+  const boot = () => { stemCache.key = null; readState(); setT(100); play(); };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(boot); else boot();
+  if (document.fonts && document.fonts.addEventListener){
+    document.fonts.addEventListener('loadingdone', () => {
+      stemCache.key = null;
+      if (!playing) render(parseFloat($('t').value));
+    });
+  }
+})();
+</script>
+</body>
+</html>
